@@ -1,6 +1,10 @@
 import type { InspectionStatus, ReportJobStatus, ReportStatus } from "@/lib/types";
 import { getRepository } from "@/lib/data/repository";
 import { getTankSummary } from "@/lib/services/tank-service";
+import type {
+  SeverityByTank,
+  StatusCounts,
+} from "@/lib/services/client-dashboard-service";
 
 export type InspectorTotals = {
   clients: number;
@@ -43,6 +47,8 @@ export type InspectorDashboard = {
   recentInspections: RecentInspectionRow[];
   reportQueue: ReportQueueRow[];
   tanksRequiringReview: TankReviewRow[];
+  severityByTank: SeverityByTank[];
+  statusCounts: StatusCounts;
 };
 
 export async function getInspectorDashboard(): Promise<InspectorDashboard> {
@@ -112,6 +118,24 @@ export async function getInspectorDashboard(): Promise<InspectorDashboard> {
     }))
     .sort((a, b) => a.minThickness - b.minThickness);
 
+  const severityByTank: SeverityByTank[] = summaries
+    .filter((s) => s.metrics)
+    .map((s) => ({
+      tankNumber: s.tank.tankNumber,
+      tankSlug: s.tank.slug,
+      critical: s.metrics!.criticalCells,
+      concern: s.metrics!.concernCells,
+      monitor: s.metrics!.monitorCells,
+      ok: s.metrics!.okCells,
+    }))
+    .sort((a, b) => b.critical - a.critical || b.concern - a.concern)
+    .slice(0, 10);
+
+  const statusCounts: StatusCounts = { healthy: 0, monitor: 0, action_recommended: 0 };
+  for (const s of summaries) {
+    if (s.latestRun) statusCounts[s.latestRun.status] += 1;
+  }
+
   return {
     totals: {
       clients: clients.length,
@@ -122,5 +146,7 @@ export async function getInspectorDashboard(): Promise<InspectorDashboard> {
     recentInspections,
     reportQueue,
     tanksRequiringReview,
+    severityByTank,
+    statusCounts,
   };
 }

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
-import { MetricCard } from "@/components/ui/MetricCard";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { StatusBadge } from "@/components/ui/Badge";
+import { SeverityByTankChart } from "@/components/dashboard/SeverityByTankChart";
+import { FleetStatusDonut } from "@/components/dashboard/FleetStatusDonut";
 import { requireSession } from "@/lib/auth/session";
 import {
   getInspectorDashboard,
@@ -35,8 +37,14 @@ export default async function InspectorDashboardPage() {
   const session = await requireSession();
   if (session.role !== "inspector") redirect("/client/dashboard");
 
-  const { totals, recentInspections, reportQueue, tanksRequiringReview } =
-    await getInspectorDashboard();
+  const {
+    totals,
+    recentInspections,
+    reportQueue,
+    tanksRequiringReview,
+    severityByTank,
+    statusCounts,
+  } = await getInspectorDashboard();
 
   const recentCols: Column<RecentInspectionRow>[] = [
     { key: "client", header: "Client", render: (r) => r.clientName },
@@ -99,15 +107,30 @@ export default async function InspectorDashboardPage() {
       description="Cross-client inspection overview and report queue"
     >
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard label="Clients" value={totals.clients} helper="active accounts" />
-        <MetricCard label="Tanks" value={totals.tanks} helper="under management" />
-        <MetricCard label="Inspection Runs" value={totals.inspections} helper="all time" />
-        <MetricCard
+        <KpiCard icon="building" tone="violet" label="Clients" value={totals.clients} helper="active accounts" />
+        <KpiCard icon="tank" tone="blue" label="Tanks" value={totals.tanks} helper="under management" />
+        <KpiCard icon="document" tone="emerald" label="Inspection Runs" value={totals.inspections} helper="all time" />
+        <KpiCard
+          icon="alert"
+          tone="red"
           label="Requiring Review"
           value={totals.tanksRequiringReview}
           helper="action recommended"
-          tone={totals.tanksRequiringReview > 0 ? "critical" : "ok"}
         />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Corrosion Severity by Tank"
+            description="Worst 10 tanks across all clients"
+          >
+            <SeverityByTankChart data={severityByTank} />
+          </SectionCard>
+        </div>
+        <SectionCard title="Fleet Status" description="All tanks by status">
+          <FleetStatusDonut counts={statusCounts} />
+        </SectionCard>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
