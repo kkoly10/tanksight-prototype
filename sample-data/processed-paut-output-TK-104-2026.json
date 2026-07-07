@@ -1,0 +1,16 @@
+{
+  "clientId": "client_acme",
+  "siteId": "site_sterling",
+  "tankId": "tank_tk104",
+  "inspectionRunId": "run_tk104_2026",
+  "source": "mock_robot_processed_output",
+  "method": "PAUT robotic tank floor scan",
+  "note": "This is already-processed measurement data, NOT raw ultrasonic signal. It illustrates the import-ready shape the upstream Go robot backend would emit for the portal to ingest.",
+  "measurements": [
+    { "x": 12.4, "y": -33.8, "thicknessInches": 0.184, "nominalThicknessInches": 0.25, "region": "annular" },
+    { "x": 40.7, "y": 25.2, "thicknessInches": 0.131, "nominalThicknessInches": 0.25, "region": "east" },
+    { "x": 2.1, "y": 44.9, "thicknessInches": 0.148, "nominalThicknessInches": 0.25, "region": "north" },
+    { "x": -5.8, "y": 1.2, "thicknessInches": 0.238, "nominalThicknessInches": 0.25, "region": "center" },
+    { "x": -33.0, "y": -20.5, "thicknessInches": 0.235, "nominalThicknessInches": 0.25, "region": "west" }
+  ]
+}

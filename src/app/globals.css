@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/*
+ * TankSight design tokens. Industrial / technical / client-ready:
+ * light content on white cards, a dark slate portal shell, one blue primary,
+ * and a fixed severity scale (emerald -> amber -> orange -> red) used everywhere
+ * (heatmap, badges, tables, PDF) so a color always means the same thing.
+ */
+@theme {
+  --color-brand: #1d4ed8; /* blue-700 */
+  --color-brand-fg: #ffffff;
+
+  --color-sev-ok: #059669; /* emerald-600 */
+  --color-sev-monitor: #f59e0b; /* amber-500 */
+  --color-sev-concern: #ea580c; /* orange-600 */
+  --color-sev-critical: #dc2626; /* red-600 */
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #f1f5f9; /* slate-100 */
+  color: #0f172a; /* slate-900 */
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for measurement tables so decimals line up. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
