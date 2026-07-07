@@ -1,0 +1,10 @@
+# Never upload secrets or local-only files to Vercel
+.env
+.env.*
+!.env.example
+
+# Not needed at runtime
+design/
+seed-export/
+node_modules/
+.next/
