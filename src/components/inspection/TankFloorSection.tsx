@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Region, Severity } from "@/lib/types";
 import type { RegionAggregate } from "@/lib/data/repository";
@@ -18,7 +18,7 @@ const TankFloorHeatmapCanvas = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[420px] w-[420px] items-center justify-center rounded-full border border-dashed border-slate-200 text-sm text-slate-400">
+      <div className="flex aspect-square w-full max-w-[420px] items-center justify-center rounded-full border border-dashed border-slate-200 text-sm text-slate-400">
         Loading heatmap…
       </div>
     ),
@@ -40,13 +40,26 @@ export function TankFloorSection({
   const selectedAggregate =
     regionAggregates.find((a) => a.region === selectedRegion) ?? null;
 
+  // Size the canvas to its column (capped), so it fits phones and scales up.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState(340);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const update = () => setSize(Math.max(240, Math.min(420, el.clientWidth)));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
-      <div className="flex flex-col items-center">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
+      <div ref={boxRef} className="flex w-full flex-col items-center">
         <TankFloorHeatmapCanvas
           cells={cells}
           tankRadiusFeet={tankRadiusFeet}
-          size={420}
+          size={size}
           selectedRegion={selectedRegion}
           onSelectRegion={(r) => setSelectedRegion((prev) => (prev === r ? null : r))}
         />

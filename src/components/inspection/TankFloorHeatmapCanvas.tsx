@@ -11,6 +11,8 @@ export type HeatmapCell = {
   region: Region;
   severity: Severity;
   thicknessInches: number;
+  /** Optional explicit fill (e.g. thickness-bin color); defaults to severity color. */
+  color?: string;
 };
 
 /**
@@ -70,7 +72,7 @@ export function TankFloorHeatmapCanvas({
               y={py - cellPx / 2}
               width={cellPx}
               height={cellPx}
-              fill={SEVERITY_STYLE[cell.severity].hex}
+              fill={cell.color ?? SEVERITY_STYLE[cell.severity].hex}
               opacity={dimmed ? 0.18 : 0.95}
               cornerRadius={1}
               onClick={() => onSelectRegion(cell.region)}

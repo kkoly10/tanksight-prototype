@@ -1,11 +1,13 @@
 import type {
   Client,
   InspectionStatus,
+  Region,
   ReportStatus,
   Severity,
+  TrendPoint,
 } from "@/lib/types";
 import { getRepository } from "@/lib/data/repository";
-import { getTankSummary } from "@/lib/services/tank-service";
+import { getTankDetail, getTankSummary } from "@/lib/services/tank-service";
 
 export type SummaryCard = {
   label: string;
@@ -34,11 +36,58 @@ export type LatestInspectionSummary = {
   status: InspectionStatus;
 } | null;
 
+export type SeverityByTank = {
+  tankNumber: string;
+  tankSlug: string;
+  critical: number;
+  concern: number;
+  monitor: number;
+  ok: number;
+};
+
+export type StatusCounts = {
+  healthy: number;
+  monitor: number;
+  action_recommended: number;
+};
+
+export type FeaturedTank = {
+  tankNumber: string;
+  tankSlug: string;
+  tankRadiusFeet: number;
+  cells: { x: number; y: number; thicknessInches: number; region: Region; severity: Severity }[];
+  readings: number;
+  minThickness: number;
+  inspectedAt: string;
+  trendData: TrendPoint[];
+  currentRunId: string;
+  reportReady: boolean;
+  pipelineStep: number;
+  criticalCells: number;
+  concernCells: number;
+  findingsCount: number;
+  remainingLifeYears: number | null;
+  minThicknessDeltaVsPrev: number | null;
+};
+
+export type FleetStats = {
+  totalTanks: number;
+  totalSites: number;
+  openFindings: number;
+  criticalZones: number;
+  reportsReady: number;
+  avgMinThickness: number;
+};
+
 export type ClientDashboard = {
   client: Client;
   summaryCards: SummaryCard[];
   latestInspection: LatestInspectionSummary;
   siteTankRows: ClientTankRow[];
+  severityByTank: SeverityByTank[];
+  statusCounts: StatusCounts;
+  featured: FeaturedTank | null;
+  fleet: FleetStats;
 };
 
 const OPEN_SEVERITIES: Severity[] = ["critical", "concern"];
@@ -124,5 +173,87 @@ export async function getClientDashboard(clientId: string): Promise<ClientDashbo
     { label: "Reports Ready", value: reportsReady, helper: "available to download" },
   ];
 
-  return { client, summaryCards, latestInspection, siteTankRows: rows };
+  // Chart data.
+  const severityByTank: SeverityByTank[] = summaries
+    .filter((s) => s.metrics)
+    .map((s) => ({
+      tankNumber: s.tank.tankNumber,
+      tankSlug: s.tank.slug,
+      critical: s.metrics!.criticalCells,
+      concern: s.metrics!.concernCells,
+      monitor: s.metrics!.monitorCells,
+      ok: s.metrics!.okCells,
+    }))
+    // Worst first (most critical, then concern).
+    .sort((a, b) => b.critical - a.critical || b.concern - a.concern);
+
+  const statusCounts: StatusCounts = { healthy: 0, monitor: 0, action_recommended: 0 };
+  for (const s of summaries) {
+    if (s.latestRun) statusCounts[s.latestRun.status] += 1;
+  }
+
+  // Fleet rollups.
+  const withMetrics = summaries.filter((s) => s.metrics);
+  const criticalZones = withMetrics.reduce((sum, s) => sum + s.metrics!.criticalCells, 0);
+  const avgMinThickness =
+    withMetrics.length > 0
+      ? withMetrics.reduce((sum, s) => sum + s.metrics!.minThickness, 0) / withMetrics.length
+      : 0;
+  const fleet: FleetStats = {
+    totalTanks: tanks.length,
+    totalSites: sites.length,
+    openFindings,
+    criticalZones,
+    reportsReady,
+    avgMinThickness,
+  };
+
+  // Featured tank = worst (thinnest) tank, for the hero floor-map panel.
+  const worst = [...withMetrics].sort(
+    (a, b) => a.metrics!.minThickness - b.metrics!.minThickness,
+  )[0];
+  let featured: FeaturedTank | null = null;
+  if (worst) {
+    const detail = await getTankDetail(worst.tank.slug, clientId);
+    const trend = detail.trendData;
+    const deltaVsPrev =
+      trend.length >= 2
+        ? trend[trend.length - 1].minThickness - trend[trend.length - 2].minThickness
+        : null;
+    featured = {
+      tankNumber: detail.tank.tankNumber,
+      tankSlug: detail.tank.slug,
+      tankRadiusFeet: detail.tank.diameterFeet / 2,
+      cells: detail.cells.map((c) => ({
+        x: c.x,
+        y: c.y,
+        thicknessInches: c.thicknessInches,
+        region: c.region,
+        severity: c.severity,
+      })),
+      readings: detail.cells.length,
+      minThickness: detail.metrics.minThickness,
+      inspectedAt: detail.currentRun.inspectedAt,
+      trendData: trend,
+      currentRunId: detail.currentRun.id,
+      reportReady: detail.currentRun.reportStatus === "ready",
+      pipelineStep: detail.currentRun.reportStatus === "ready" ? 3 : 1,
+      criticalCells: detail.metrics.criticalCells,
+      concernCells: detail.metrics.concernCells,
+      findingsCount: detail.findings.length,
+      remainingLifeYears: detail.metrics.estimatedRemainingLifeYears,
+      minThicknessDeltaVsPrev: deltaVsPrev,
+    };
+  }
+
+  return {
+    client,
+    summaryCards,
+    latestInspection,
+    siteTankRows: rows,
+    severityByTank,
+    statusCounts,
+    featured,
+    fleet,
+  };
 }

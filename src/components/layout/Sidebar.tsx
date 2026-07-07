@@ -24,11 +24,13 @@ export function Sidebar({
   accountName,
   roleLabel,
   contextName,
+  onNavigate,
 }: {
   items: NavItem[];
   accountName: string;
   roleLabel: string;
   contextName: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -51,6 +53,7 @@ export function Sidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 active
                   ? "bg-blue-600 text-white"
